@@ -15,7 +15,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_program(CCACHE_PROGRAM ccache)
 if(CCACHE_PROGRAM)
     set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
-    set(CMAKE_C_COMPILER LAUNCHER "${CCACHE_PROGRAM}")
+    set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
 else()
     message("ccache not found")
 endif()
@@ -42,6 +42,31 @@ file(GLOB_RECURSE SOURCES
 )
 file(GLOB_RECURSE C_SOURCES "src/*.c")
 
+# ------------------------ Internal / External libs ---------------------------
+
+# Internal project libraries (your own code)
+file(GLOB_RECURSE INTERNAL_LIB_SOURCES
+    "lib/internal/*.cpp" "lib/internal/*.cxx" "lib/internal/*.cc" "lib/internal/*.c++" "lib/internal/*.cp"
+)
+file(GLOB_RECURSE INTERNAL_LIB_C_SOURCES "lib/internal/*.c")
+file(GLOB_RECURSE INTERNAL_LIB_HEADERS
+    "lib/internal/*.hh" "lib/internal/*.hpp" "lib/internal/*.hxx" "lib/internal/*.h++" "lib/internal/*.hp"
+)
+
+if(INTERNAL_LIB_SOURCES OR INTERNAL_LIB_C_SOURCES OR INTERNAL_LIB_HEADERS)
+    add_library(${APP_NAME}_lib ${INTERNAL_LIB_SOURCES} ${INTERNAL_LIB_C_SOURCES} ${INTERNAL_LIB_HEADERS})
+    target_include_directories(${APP_NAME}_lib PUBLIC include/ lib/internal/)
+    set(APP_LINK_LIBS ${APP_NAME}_lib)
+else()
+    set(APP_LINK_LIBS "")
+endif()
+
+# External libraries (cloned via make add-module)
+# Convention: each external lib lives in lib/external/<name>
+# - Header-only libs: their headers will be picked up via include dirs below.
+# - Libs with their own CMakeLists.txt: add `add_subdirectory(lib/external/<name>)`
+#   and link their target manually with target_link_libraries(${APP_NAME} PRIVATE <target>).
+
 # Headers (IDE-only)
 file(GLOB_RECURSE HEADERS
     "include/*.hh" "include/*.hpp" "include/*.hxx" "include/*.h++" "include/*.hp"
@@ -50,7 +75,12 @@ file(GLOB_RECURSE HEADERS
 
 # Create executable
 add_executable(${APP_NAME} ${SOURCES} ${C_SOURCES} ${HEADERS})
+target_link_libraries(${APP_NAME} PRIVATE ${APP_LINK_LIBS})
 
 # Include folder
-target_include_directories(${APP_NAME} PRIVATE include/)
-
+target_include_directories(${APP_NAME} PRIVATE
+    include/
+    lib/internal/
+    lib/external/
+    lib/external/json.git/include/
+)

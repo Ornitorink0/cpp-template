@@ -1,0 +1,12 @@
+{
+    "recommendations": [
+        "ms-vscode.cpptools-extension-pack",
+        "jeff-hykin.better-cpp-syntax",
+        "aaron-bond.better-comments",
+        "hars.cppsnippets",
+        "kylinideteam.cmake-intellisence",
+        "ms-vscode.cmake-tools",
+        "stackbreak.comment-divider",
+        "usernamehw.errorlens"
+    ]
+}

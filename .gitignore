@@ -30,7 +30,7 @@ cmake_install.cmake
 !CMakeLists.txt
 
 # IDE files
-.vscode/
+# .vscode/
 .vs/
 *.vcxproj*
 *.sln
