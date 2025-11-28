@@ -1,0 +1,22 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+  - repo: https://github.com/pocc/pre-commit-clang-format
+    rev: v1.1.0
+    hooks:
+      - id: clang-format
+        args: [--style=file]
+
+# Optional: a lightweight local check to ensure CMake exists before committing
+  - repo: local
+    hooks:
+      - id: cmake-available
+        name: CMake available
+        entry: cmake --version
+        language: system
+        files: ^(?!).*$
+        always_run: false

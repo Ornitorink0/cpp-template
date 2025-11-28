@@ -1,0 +1,25 @@
+{
+    "AppHeader": {
+        "prefix": "AppHeader",
+        "body": [
+            "/**",
+            " * @file        $TM_FILENAME",
+            " * @author      ${2:GitHubUsername} <${3:email@example.com}>",
+            " * @created     ${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}",
+            " * @updated     ${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}",
+            " * @license     ${9:License type (e.g., MIT, GPL-3.0, etc.)}",
+            " * @version     ${4:version}",
+            " * @brief       ${5:Brief description of the file}",
+            " *",
+            " * @description ${6:Detailed description of the file}",
+            " *",
+            " * @remarks",
+            " * ${7:Additional notes or technical details}",
+            " *",
+            " * @changelog",
+            " * ${8:List of changes and updates}",
+            " */"
+        ],
+        "description": "Professional header template for all kind of files"
+    }
+}

@@ -1,86 +1,140 @@
+cmake_minimum_required(VERSION 3.16)
+
+# ---------------------------------------------------------
+#  Project Setup
+# ---------------------------------------------------------
 set(APP_NAME "app")
+project(${APP_NAME} VERSION 1.0 LANGUAGES C CXX)
 
-cmake_minimum_required(VERSION 3.10)
-project(${APP_NAME})
+# ---------------------------------------------------------
+#  Options
+# ---------------------------------------------------------
+option(ENABLE_WARNINGS "Enable compiler warnings" ON)
+option(ENABLE_SANITIZERS "Enable sanitizers in Debug mode" ON)
+option(ENABLE_CCACHE "Use ccache if available" ON)
 
-# C++ Standard
+# ---------------------------------------------------------
+#  C++ Standard
+# ---------------------------------------------------------
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Enable compile_commands.json (for clangd)
+# Generate compile_commands.json
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Force ccache usage
-find_program(CCACHE_PROGRAM ccache)
-if(CCACHE_PROGRAM)
-    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
-    set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
-else()
-    message("ccache not found")
+# ---------------------------------------------------------
+#  ccache
+# ---------------------------------------------------------
+if(ENABLE_CCACHE)
+    find_program(CCACHE_PROGRAM ccache)
+    if(CCACHE_PROGRAM)
+        message(STATUS "Using ccache")
+        set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+        set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+    endif()
 endif()
 
-# Build type flags
+# ---------------------------------------------------------
+#  Build Types Flags
+# ---------------------------------------------------------
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
-set(CMAKE_CXX_FLAGS_RELEASE "-O2")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 
-# Warnings
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+# ---------------------------------------------------------
+#  Warnings
+# ---------------------------------------------------------
+if(ENABLE_WARNINGS AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     add_compile_options(
-        -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion
+        -Wall -Wextra -Wpedantic
+        -Wshadow -Wconversion -Wsign-conversion
+        -Wformat=2 -Wnull-dereference
     )
 endif()
 
-# Sanitizers in Debug
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_compile_options(-Werror)
+# ---------------------------------------------------------
+#  Sanitizers
+# ---------------------------------------------------------
+if(ENABLE_SANITIZERS AND CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_options(-fsanitize=address -fsanitize=undefined)
+    add_link_options(-fsanitize=address -fsanitize=undefined)
 endif()
 
-# Sources
+# ---------------------------------------------------------
+#  Sources
+# ---------------------------------------------------------
 file(GLOB_RECURSE SOURCES
     "src/*.cpp" "src/*.cxx" "src/*.cc" "src/*.c++" "src/*.cp"
+    "src/*.c"
 )
-file(GLOB_RECURSE C_SOURCES "src/*.c")
 
-# ------------------------ Internal / External libs ---------------------------
+file(GLOB_RECURSE HEADERS
+    "include/*.hpp" "include/*.hh" "include/*.h" "include/*.hxx"
+    "src/*.hpp" "src/*.hh" "src/*.hxx"
+)
 
-# Internal project libraries (your own code)
+# ---------------------------------------------------------
+#  Internal Library
+# ---------------------------------------------------------
 file(GLOB_RECURSE INTERNAL_LIB_SOURCES
-    "lib/internal/*.cpp" "lib/internal/*.cxx" "lib/internal/*.cc" "lib/internal/*.c++" "lib/internal/*.cp"
+    "lib/internal/*.cpp" "lib/internal/*.cxx" "lib/internal/*.cc"
+    "lib/internal/*.c"
 )
-file(GLOB_RECURSE INTERNAL_LIB_C_SOURCES "lib/internal/*.c")
 file(GLOB_RECURSE INTERNAL_LIB_HEADERS
-    "lib/internal/*.hh" "lib/internal/*.hpp" "lib/internal/*.hxx" "lib/internal/*.h++" "lib/internal/*.hp"
+    "lib/internal/*.hpp" "lib/internal/*.hh" "lib/internal/*.hxx"
 )
 
-if(INTERNAL_LIB_SOURCES OR INTERNAL_LIB_C_SOURCES OR INTERNAL_LIB_HEADERS)
-    add_library(${APP_NAME}_lib ${INTERNAL_LIB_SOURCES} ${INTERNAL_LIB_C_SOURCES} ${INTERNAL_LIB_HEADERS})
-    target_include_directories(${APP_NAME}_lib PUBLIC include/ lib/internal/)
-    set(APP_LINK_LIBS ${APP_NAME}_lib)
-else()
-    set(APP_LINK_LIBS "")
+if(INTERNAL_LIB_SOURCES)
+    add_library(${APP_NAME}_lib STATIC
+        ${INTERNAL_LIB_SOURCES}
+        ${INTERNAL_LIB_HEADERS}
+    )
+    target_include_directories(${APP_NAME}_lib PUBLIC
+        include/
+        lib/internal/
+        lib/external/json.git/include/
+    )
 endif()
 
-# External libraries (cloned via make add-module)
-# Convention: each external lib lives in lib/external/<name>
-# - Header-only libs: their headers will be picked up via include dirs below.
-# - Libs with their own CMakeLists.txt: add `add_subdirectory(lib/external/<name>)`
-#   and link their target manually with target_link_libraries(${APP_NAME} PRIVATE <target>).
+# ---------------------------------------------------------
+#  External Libraries
+# ---------------------------------------------------------
+# Prefer using an on-disk external (submodule) if present; otherwise
+# fall back to FetchContent to download nlohmann/json automatically.
+include(FetchContent)
 
-# Headers (IDE-only)
-file(GLOB_RECURSE HEADERS
-    "include/*.hh" "include/*.hpp" "include/*.hxx" "include/*.h++" "include/*.hp"
-    "src/*.hh" "src/*.hpp" "src/*.hxx" "src/*.h++" "src/*.hp"
-)
+if(EXISTS "${CMAKE_SOURCE_DIR}/lib/external/json.git/CMakeLists.txt")
+    message(STATUS "Using bundled nlohmann/json submodule from lib/external/json.git")
+    add_subdirectory(lib/external/json.git)
+elseif(NOT TARGET nlohmann_json::nlohmann_json)
+    message(STATUS "Fetching nlohmann/json via FetchContent")
+    FetchContent_Declare(
+        nlohmann_json
+        GIT_REPOSITORY https://github.com/nlohmann/json.git
+        GIT_TAG v3.11.2
+    )
+    FetchContent_MakeAvailable(nlohmann_json)
+endif()
 
-# Create executable
-add_executable(${APP_NAME} ${SOURCES} ${C_SOURCES} ${HEADERS})
-target_link_libraries(${APP_NAME} PRIVATE ${APP_LINK_LIBS})
+# ---------------------------------------------------------
+#  Executable
+# ---------------------------------------------------------
+add_executable(${APP_NAME} ${SOURCES} ${HEADERS})
 
-# Include folder
+# Includes
 target_include_directories(${APP_NAME} PRIVATE
     include/
     lib/internal/
     lib/external/
     lib/external/json.git/include/
 )
+
+# Linking internal libs
+if(TARGET ${APP_NAME}_lib)
+    target_link_libraries(${APP_NAME} PRIVATE ${APP_NAME}_lib)
+    # If the external nlohmann json target exists, link it to the internal lib so
+    # internal sources can use <nlohmann/json.hpp> via target include directories.
+    if(TARGET nlohmann_json::nlohmann_json)
+        target_link_libraries(${APP_NAME}_lib PUBLIC nlohmann_json::nlohmann_json)
+    endif()
+endif()

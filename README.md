@@ -10,9 +10,9 @@ Starter for C++20 apps with a sample `main`. Reusable code goes in `lib/` (compi
 
 ## Quick Usage
 
-1. `make first-build` — configures and compiles in `build/`.
-2. `make run` — runs the binary (just for testing binaries).
-3. `make watch` – have fun programming while watching the changes in real time!
+1. `make configure` — configures (CMake) and compiles in `build/`.
+2. `make run` — runs the binary (after build).
+3. `make watch` – auto-build & run on source change (requires `fswatch` or `entr`).
 
 ## Makefile Targets
 
@@ -36,10 +36,58 @@ Starter for C++20 apps with a sample `main`. Reusable code goes in `lib/` (compi
 
 ## Helpful Notes
 
-- You can delete the example files (`lib/`, `src/main.cpp`, `include/version.hpp`) and CMake will continue configuring itself: the library is created only if `lib/` has sources.
+- You can delete the example files (`lib/`, `src/main.cpp`, `include/version.hpp`, ect.) and CMake will continue configuring itself: the library is created only if `lib/` has sources.
 - `.gitmodules` tracks external libraries added with `make add-module`; a default example (`lib/external/json.git`) is included. Run `git submodule update --init --recursive` after cloning to fetch them.
+ 
+### CI and pre-commit
+
+- A GitHub Actions workflow (.github/workflows/ci.yml) runs `make first-build` and `make build` on clean runners (Linux and macOS) to ensure `make first-build` works on new machines and PRs.
+- A `.pre-commit-config.yaml` is included to help keep the codebase tidy — install pre-commit locally and register hooks with:
+
+```bash
+pip install pre-commit
+pre-commit install
+pre-commit run --all-files
+```
+
+Add a `.clang-format` file if you want a stable formatting policy used by pre-commit's clang-format hook.
 - Add `.vscode/` to `.gitignore` if you want to ignore IDE files.
 
+### Adding Dependencies (General Approach)
+
+This repository is a *template* — `lib/external/json.git` is just an example. Here you'll find general guidelines and options for adding libraries to your project in a clean and repeatable way.
+
+1) Vendoring / Submodule (Simple, Reproducible)
+- Add the library into `lib/external/<name>` (e.g., with `make add-module`, which creates a git submodule).
+- If the library contains a `CMakeLists.txt`, add its target to `add_subdirectory(lib/external/<name>)`.
+- **Pros**: Reproducibility, offline work, dependency version control.
+- **Cons**: Multiple files in the repo, manual updates.
+
+2) FetchContent (downloads at configure time)
+- CMake downloads the dependency if it's not vendored.
+- Example:
+
+```cmake
+include(FetchContent)
+FetchContent_Declare(
+    foo
+    GIT_REPOSITORY https://github.com/someone/foo.git
+    GIT_TAG v1.2.3
+)
+FetchContent_MakeAvailable(foo)
+# then link: target_link_libraries(my_target PUBLIC foo::foo)
+```
+
+3) add_subdirectory (if the library is present locally)
+- When the library is included in the repo (submodule or subfolder), use `add_subdirectory(lib/external/<name>)` and link its target.
+- This is the default behavior of the template when it finds a submodule with CMake.
+
+4) find_package (search for packages installed on the system or managed via the package manager)
+- If the library exposes a package config (e.g., `fooConfig.cmake`), use `find_package(foo REQUIRED)` and then `target_link_libraries(my_target PRIVATE foo::foo)`.
+
+5) Package manager (conan / vcpkg)
+- For real-world projects, use conan or vcpkg for centralized dependency management.
+- Integrate with CMake via toolchain or `find_package` and configure CI to use the same technique.
 ---
 
 Personalize as you want, and enjoy programming!

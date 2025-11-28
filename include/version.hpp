@@ -1,3 +1,10 @@
+/**
+ * @file        version.hpp
+ * @license     MIT
+ * @version     1.0.0
+ * @brief       [Header] Version information for the project
+ */
+
 #pragma once
 #ifndef VERSION_H
 #define VERSION_H
