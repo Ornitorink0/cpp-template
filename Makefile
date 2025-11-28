@@ -74,6 +74,10 @@ add-module:
 	@git submodule add $(LIB_URL) lib/external/$(notdir $(LIB_URL))
 	@echo "Library added as git submodule in lib/external/"
 
+fetch-modules:
+	@git submodule update --init --recursive
+	@echo "All submodules have been initialized and updated."
+
 # ---------------------------------- Testing --------------------------------- #
 test:
 	@echo "No tests yet"

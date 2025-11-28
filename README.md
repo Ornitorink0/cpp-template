@@ -11,7 +11,8 @@ Starter for C++20 apps with a sample `main`. Reusable code goes in `lib/` (compi
 ## Quick Usage
 
 1. `make first-build` — configures and compiles in `build/`.
-2. `./build/app` — runs the binary.
+2. `make run` — runs the binary (just for testing binaries).
+3. `make watch` – have fun programming while watching the changes in real time!
 
 ## Makefile Targets
 
@@ -22,6 +23,7 @@ Starter for C++20 apps with a sample `main`. Reusable code goes in `lib/` (compi
 - `make watch` — recompiles/runs on changes (requires `fswatch` or `entr`).
 - `make format` — runs `clang-format` on sources/headers (requires clang-format in PATH).
 - `make add-module LIB_URL=<git repo>` — adds a git submodule under `lib/external/`.
+- `make fetch-modules` – fetch all git submodules under `lib/external/`.
 - `make clean` — deletes `build/`.
 
 ## Structure
