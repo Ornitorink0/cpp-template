@@ -1,0 +1,56 @@
+set(APP_NAME "app")
+
+cmake_minimum_required(VERSION 3.10)
+project(${APP_NAME})
+
+# C++ Standard
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Enable compile_commands.json (for clangd)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Force ccache usage
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+    set(CMAKE_C_COMPILER LAUNCHER "${CCACHE_PROGRAM}")
+else()
+    message("ccache not found")
+endif()
+
+# Build type flags
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2")
+
+# Warnings
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    add_compile_options(
+        -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion
+    )
+endif()
+
+# Sanitizers in Debug
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_options(-Werror)
+endif()
+
+# Sources
+file(GLOB_RECURSE SOURCES
+    "src/*.cpp" "src/*.cxx" "src/*.cc" "src/*.c++" "src/*.cp"
+)
+file(GLOB_RECURSE C_SOURCES "src/*.c")
+
+# Headers (IDE-only)
+file(GLOB_RECURSE HEADERS
+    "include/*.hh" "include/*.hpp" "include/*.hxx" "include/*.h++" "include/*.hp"
+    "src/*.hh" "src/*.hpp" "src/*.hxx" "src/*.h++" "src/*.hp"
+)
+
+# Create executable
+add_executable(${APP_NAME} ${SOURCES} ${C_SOURCES} ${HEADERS})
+
+# Include folder
+target_include_directories(${APP_NAME} PRIVATE include/)
+
